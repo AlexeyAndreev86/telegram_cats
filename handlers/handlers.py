@@ -22,42 +22,33 @@ async def send_cat(call: types.CallbackQuery):
     chat = call.from_user.id
     keyboard = get_keyboard()
 
-    # with open('file_id.txt', 'r') as file:
-    #     photos = file.readlines()
-    # images = [path.strip() for path in photos]
-    # file_for_send = choice(images)
-
     db.cursor.execute('SELECT file_id FROM photos ORDER BY RANDOM() LIMIT 1;')
-    file_for_send = db.cursor.fetchone()[0]
+    file_for_send = db.cursor.fetchone()
+    if file_for_send is not None:
+        file_for_send = file_for_send[0]
+        await bot.send_photo(chat_id=chat, photo=file_for_send)
+        await bot.send_message(chat_id=chat, text='Жми кнопку или кидай фото в чат', reply_markup=keyboard)
+    else:
+        await bot.send_message(chat_id=chat, text='У нас пока нет котегов :(')
 
-    await bot.send_photo(chat_id=chat, photo=file_for_send)
-    await bot.send_message(chat_id=chat, text='Жми кнопку или кидай фото в чат', reply_markup=keyboard)
 
-    @dp.callback_query_handler(text='how_many')
-    async def cat_counter(call: types.CallbackQuery):
-        chat = call.from_user.id
-        keyboard = get_one_button()
+@dp.callback_query_handler(text='how_many')
+async def cat_counter(call: types.CallbackQuery):
+    chat = call.from_user.id
+    keyboard = get_one_button()
 
-        db.cursor.execute('SELECT COUNT(file_id) FROM photos;')
-        count = db.cursor.fetchone()[0]
-
-        await bot.send_message(chat_id=chat, text=f'У нас {count} котегов', reply_markup=keyboard)
+    db.cursor.execute('SELECT COUNT(file_id) FROM photos;')
+    count = db.cursor.fetchone()[0]
+    await bot.send_message(chat_id=chat, text=f'У нас {count} котегов', reply_markup=keyboard)
 
 
 @dp.message_handler(content_types=[types.ContentType.PHOTO])
-async def echo_document(message: types.Message):
-    """
-    Пишем ID фотки в базу и в файл :)
-    А хотелось писать в гугл диск.
-    """
-    id = message.photo[-1].file_id
+async def write_photo_id_into_postgres(message: types.Message):
+    photo_id = message.photo[-1].file_id
     chat = message.from_user.id
     keyboard = get_keyboard()
 
-    with open('file_id.txt', 'a') as f:
-        f.write(id+'\n')
-
-    db.cursor.execute(f"INSERT INTO photos (file_id) VALUES ('{id}');")
+    db.cursor.execute(f"INSERT INTO photos (file_id) VALUES ('{photo_id}');")
     db.connection.commit()
     await message.reply('Класс! Давай исчо!')
     await bot.send_message(chat_id=chat, text='Жми кнопку или кидай фото в чат', reply_markup=keyboard)
