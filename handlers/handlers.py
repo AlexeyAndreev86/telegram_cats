@@ -1,7 +1,6 @@
 from aiogram import types, Dispatcher
 from keyboard.keyboard import get_keyboard, get_one_button
 from bot import bot
-from random import choice
 from db_postgres import DB
 # from google_drive_api import GoogleDiskAPI
 
@@ -11,16 +10,11 @@ db = DB()
 # disk = GoogleDiskAPI()
 
 
+@dp.message_handler()
 @dp.message_handler(commands='start')
 async def start(message: types.Message):
     keyboard = get_keyboard()
     await message.answer('Кидай фотографию котика в чат или жми кнопку', reply_markup=keyboard)
-
-
-@dp.message_handler()
-async def reply(message: types.Message):
-    keyboard = get_keyboard()
-    await message.reply('Кидай фотографию котика в чат или жми кнопку', reply_markup=keyboard)
 
 
 @dp.callback_query_handler(text='get_cat')
