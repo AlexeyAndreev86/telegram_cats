@@ -1,12 +1,17 @@
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from pydrive.files import ApiRequestError, FileNotUploadedError, FileNotDownloadableError
+from random import choice
 
 import constants
 import os
 
 
 class GoogleDiskAPI:
+    """
+    Пока не получается отправлять файл с гугл-диска сразу в телеграм без скачивания на комп,
+    пока буду сохранять id-фоток в БД, а оттуда в виде айдишника передавать в чат телеграм.
+    """
     __EXIST = None
 
     def __new__(cls, *args, **kwargs):
@@ -38,4 +43,8 @@ class GoogleDiskAPI:
 
     def get_content_list(self):
         file_list = self.drive.ListFile({'q': f"'{self.folder}' in parents and trashed=false"}).GetList()
-        return [(file['title'], file['id']) for file in file_list]
+        return [(file['title'], file['id'], file['embedLink']) for file in file_list]
+
+    def get_random_file(self):
+        file_list = self.get_content_list()
+        return choice(file_list)[2]
