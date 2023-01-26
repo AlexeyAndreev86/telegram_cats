@@ -1,13 +1,14 @@
+import asyncio
 from aiogram import types, Dispatcher
 from keyboard.keyboard import get_keyboard, get_one_button
 from bot import bot
-from db_postgres import DB
-# from google_drive_api import GoogleDiskAPI
+from db_asyncpg import DB
 
 
 dp = Dispatcher(bot)
 db = DB()
-# disk = GoogleDiskAPI()
+loop = asyncio.get_event_loop()
+loop.run_until_complete(db.create_pool())
 
 
 @dp.message_handler()
@@ -22,10 +23,9 @@ async def send_cat(call: types.CallbackQuery):
     chat = call.from_user.id
     keyboard = get_keyboard()
 
-    db.cursor.execute('SELECT file_id FROM photos ORDER BY RANDOM() LIMIT 1;')
-    file_for_send = db.cursor.fetchone()
+    file_for_send = await db.execute('SELECT file_id FROM photos ORDER BY RANDOM() LIMIT 1;', fetchval=True)
+
     if file_for_send is not None:
-        file_for_send = file_for_send[0]
         await bot.send_photo(chat_id=chat, photo=file_for_send)
         await bot.send_message(chat_id=chat, text='Жми кнопку или кидай фото в чат', reply_markup=keyboard)
     else:
@@ -37,8 +37,7 @@ async def cat_counter(call: types.CallbackQuery):
     chat = call.from_user.id
     keyboard = get_one_button()
 
-    db.cursor.execute('SELECT COUNT(file_id) FROM photos;')
-    count = db.cursor.fetchone()[0]
+    count = await db.execute('SELECT COUNT(file_id) FROM photos;', fetchval=True)
     await bot.send_message(chat_id=chat, text=f'У нас {count} котегов', reply_markup=keyboard)
 
 
@@ -48,7 +47,6 @@ async def write_photo_id_into_postgres(message: types.Message):
     chat = message.from_user.id
     keyboard = get_keyboard()
 
-    db.cursor.execute(f"INSERT INTO photos (file_id) VALUES ('{photo_id}');")
-    db.connection.commit()
+    await db.execute(f"INSERT INTO photos (file_id) VALUES ('{photo_id}');", fetch=True)
     await message.reply('Класс! Давай исчо!')
     await bot.send_message(chat_id=chat, text='Жми кнопку или кидай фото в чат', reply_markup=keyboard)
